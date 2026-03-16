@@ -144,26 +144,25 @@ class _MapScreenState extends State<MapScreen> {
             ),
           ),
 
-          // 2. Weather & Status Top Bar
+          // 2. Search & Top Bar (Google Maps Style)
           Positioned(
             top: 50,
-            left: 20,
-            right: 20,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            left: 16,
+            right: 16,
+            child: Column(
               children: [
-                _buildGlassButton(
-                  icon: LucideIcons.cloudSnow,
-                  label: '-2°C',
-                  onTap: () {},
-                ),
-                _buildGlassButton(
-                  icon: LucideIcons.ghost,
-                  label: 'Ghost Mode',
-                  onTap: () {},
-                ),
+                _buildSearchBar(),
+                const SizedBox(height: 12),
+                _buildCategories(),
               ],
             ),
+          ),
+
+          // Map Controls (Right Side)
+          Positioned(
+            right: 16,
+            top: MediaQuery.of(context).size.height * 0.22,
+            child: _buildMapControls(),
           ),
 
           // 3. Time-Travel Slider (Vertical)
@@ -346,6 +345,86 @@ class _MapScreenState extends State<MapScreen> {
             ),
           )
       ],
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return _buildGlassContainer(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      borderRadius: 30,
+      child: Row(
+        children: [
+          Icon(LucideIcons.search, color: Colors.white70, size: 20),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Text(
+              'Search here',
+              style: TextStyle(color: Colors.white70, fontSize: 16),
+            ),
+          ),
+          Icon(LucideIcons.mic, color: Colors.white70, size: 20),
+          const SizedBox(width: 16),
+          CircleAvatar(
+            radius: 14,
+            backgroundColor: const Color(0xFF00E5FF).withOpacity(0.2),
+            child: Icon(LucideIcons.user, color: const Color(0xFF00E5FF), size: 16),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCategories() {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      showsHorizontalScrollIndicator: false,
+      child: Row(
+        children: [
+          _buildCategoryChip(LucideIcons.home, 'Home'),
+          const SizedBox(width: 8),
+          _buildCategoryChip(LucideIcons.coffee, 'Coffee'),
+          const SizedBox(width: 8),
+          _buildCategoryChip(LucideIcons.fuel, 'Gas'),
+          const SizedBox(width: 8),
+          _buildCategoryChip(LucideIcons.shoppingCart, 'Groceries'),
+          const SizedBox(width: 8),
+          _buildCategoryChip(LucideIcons.utensils, 'Restaurants'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCategoryChip(IconData icon, String label) {
+    return _buildGlassContainer(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      borderRadius: 20,
+      child: Row(
+        children: [
+          Icon(icon, color: Colors.white70, size: 16),
+          const SizedBox(width: 6),
+          Text(label, style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMapControls() {
+    return Column(
+      children: [
+        _buildGlassIconButton(LucideIcons.layers),
+        const SizedBox(height: 12),
+        _buildGlassIconButton(LucideIcons.navigation),
+        const SizedBox(height: 12),
+        _buildGlassIconButton(LucideIcons.compass),
+      ],
+    );
+  }
+
+  Widget _buildGlassIconButton(IconData icon) {
+    return _buildGlassContainer(
+      padding: const EdgeInsets.all(12),
+      borderRadius: 30, // Circular
+      child: Icon(icon, color: Colors.white, size: 20),
     );
   }
 }
