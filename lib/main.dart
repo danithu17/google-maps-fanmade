@@ -40,6 +40,8 @@ class MapScreen extends StatefulWidget {
 
 class _MapScreenState extends State<MapScreen> {
   final MapController _mapController = MapController();
+  double _timeSliderValue = 0.5;
+  bool _poiExpanded = false;
 
   static const LatLng _initialPosition = LatLng(37.7749, -122.4194); // SF
 
