@@ -377,7 +377,6 @@ class _MapScreenState extends State<MapScreen> {
   Widget _buildCategories() {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      showsHorizontalScrollIndicator: false,
       child: Row(
         children: [
           _buildCategoryChip(LucideIcons.home, 'Home'),
