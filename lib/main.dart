@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
@@ -38,55 +39,16 @@ class MapScreen extends StatefulWidget {
 }
 
 class _MapScreenState extends State<MapScreen> {
-  final Completer<GoogleMapController> _controller = Completer();
-  double _timeSliderValue = 0.5;
-  bool _poiExpanded = false;
+  final MapController _mapController = MapController();
 
-  static const CameraPosition _initialPosition = CameraPosition(
-    target: LatLng(37.7749, -122.4194), // SF
-    zoom: 16.5,
-    tilt: 60.0, // For 3D look
-    bearing: 45.0,
-  );
+  static const LatLng _initialPosition = LatLng(37.7749, -122.4194); // SF
 
-  final String _mapStyle = '''
-  [
-    {"elementType": "geometry", "stylers": [{"color": "#0d1117"}]},
-    {"elementType": "labels.text.fill", "stylers": [{"color": "#4f5b66"}]},
-    {"elementType": "labels.text.stroke", "stylers": [{"color": "#000000"}]},
-    {"featureType": "water", "elementType": "geometry", "stylers": [{"color": "#06080c"}]},
-    {"featureType": "landscape.man_made", "elementType": "geometry.fill", "stylers": [{"color": "#0a0d12"}]},
-    {"featureType": "landscape.man_made", "elementType": "geometry.stroke", "stylers": [{"color": "#2c3e50"}]},
-    {"featureType": "road", "elementType": "geometry", "stylers": [{"color": "#1a212d"}]},
-    {"featureType": "road", "elementType": "geometry.stroke", "stylers": [{"color": "#233345"}]}
-  ]
-  ''';
-
-  final Set<Polyline> _polylines = {
-    Polyline(
-      polylineId: const PolylineId('light_ribbon'),
-      points: const [
-        LatLng(37.7749, -122.4194),
-        LatLng(37.7755, -122.4180),
-        LatLng(37.7760, -122.4170),
-        LatLng(37.7765, -122.4160),
-      ],
-      color: const Color(0xFF00E5FF),
-      width: 8,
-      jointType: JointType.round,
-      startCap: Cap.roundCap,
-      endCap: Cap.roundCap,
-    ),
-  };
-
-  final Set<Marker> _markers = {
-    Marker(
-      markerId: const MarkerId('poi_1'),
-      position: const LatLng(37.7760, -122.4170),
-      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueCyan),
-      infoWindow: const InfoWindow(title: 'Cyber Hub'),
-    ),
-  };
+  final List<LatLng> _polylinePoints = const [
+    LatLng(37.7749, -122.4194),
+    LatLng(37.7755, -122.4180),
+    LatLng(37.7760, -122.4170),
+    LatLng(37.7765, -122.4160),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -101,24 +63,47 @@ class _MapScreenState extends State<MapScreen> {
       body: Stack(
         children: [
           // 1. Map Layer
-          GoogleMap(
-            mapType: MapType.normal,
-            initialCameraPosition: _initialPosition,
-            buildingsEnabled: true, // Show 3D wireframe-like buildings
-            trafficEnabled: false,
-            polylines: _polylines,
-            markers: _markers,
-            onMapCreated: (GoogleMapController controller) {
-              controller.setMapStyle(_mapStyle);
-              _controller.complete(controller);
-            },
-            onTap: (_) {
-              if (_poiExpanded) setState(() => _poiExpanded = false);
-            },
-            myLocationEnabled: true,
-            myLocationButtonEnabled: false,
-            zoomControlsEnabled: false,
-            compassEnabled: false,
+          FlutterMap(
+            mapController: _mapController,
+            options: MapOptions(
+              initialCenter: _initialPosition,
+              initialZoom: 16.5,
+              onTap: (_, __) {
+                if (_poiExpanded) setState(() => _poiExpanded = false);
+              },
+            ),
+            children: [
+              TileLayer(
+                urlTemplate: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+                subdomains: const ['a', 'b', 'c', 'd'],
+                userAgentPackageName: 'com.example.spatial_nav_app',
+              ),
+              PolylineLayer(
+                polylines: [
+                  Polyline(
+                    points: _polylinePoints,
+                    color: const Color(0xFF00E5FF),
+                    strokeWidth: 8,
+                    strokeJoin: StrokeJoin.round,
+                    strokeCap: StrokeCap.round,
+                  ),
+                ],
+              ),
+              MarkerLayer(
+                markers: [
+                  Marker(
+                    point: const LatLng(37.7760, -122.4170),
+                    width: 40,
+                    height: 40,
+                    child: const Icon(
+                      Icons.location_on,
+                      color: Color(0xFF00E5FF),
+                      size: 40,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
 
           // Time overlay effect
