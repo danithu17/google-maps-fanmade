@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
@@ -44,6 +45,41 @@ class _MapScreenState extends State<MapScreen> {
   bool _poiExpanded = false;
   int _activeDockIndex = 0;
   bool _isDrivingMode = false;
+  LatLng _currentPosition = const LatLng(37.7749, -122.4194); // SF Default
+
+  @override
+  void initState() {
+    super.initState();
+    _determinePosition();
+  }
+
+  Future<void> _determinePosition() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      return Future.error('Location services are disabled.');
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        return Future.error('Location permissions are denied');
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      return Future.error('Location permissions are permanently denied, we cannot request permissions.');
+    }
+
+    Position position = await Geolocator.getCurrentPosition();
+    setState(() {
+      _currentPosition = LatLng(position.latitude, position.longitude);
+    });
+    _mapController.move(_currentPosition, 16.5);
+  }
 
   static const LatLng _initialPosition = LatLng(37.7749, -122.4194); // SF
 
@@ -117,21 +153,7 @@ class _MapScreenState extends State<MapScreen> {
             ),
           ),
 
-          // Weather effect UI (Snow frosting on edge)
-          IgnorePointer(
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: RadialGradient(
-                  colors: [
-                    Colors.transparent,
-                    const Color(0xFF00E5FF).withOpacity(0.05),
-                    const Color(0xFF0D1117).withOpacity(0.4),
-                  ],
-                  radius: 1.2,
-                ),
-              ),
-            ),
-          ),
+          // Removed Weather Effect per request
 
           // 2. Search & Top Bar (Google Maps Style)
           if (!_isDrivingMode)
@@ -307,11 +329,11 @@ class _MapScreenState extends State<MapScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          _buildDockItem(LucideIcons.navigation, 'Nav', 0),
-          _buildDockItem(LucideIcons.zap, 'Charge', 1),
-          _buildDockItem(LucideIcons.coffee, 'Food', 2),
-          _buildDockItem(LucideIcons.search, 'Search', 3),
-          _buildDockItem(LucideIcons.settings, 'Settings', 4),
+          _buildDockItem(LucideIcons.compass, 'Explore', 0),
+          _buildDockItem(LucideIcons.navigation, 'Go', 1),
+          _buildDockItem(LucideIcons.bookmark, 'Saved', 2),
+          _buildDockItem(LucideIcons.plusCircle, 'Contribute', 3),
+          _buildDockItem(LucideIcons.messageSquare, 'Updates', 4),
         ],
       ),
     );
