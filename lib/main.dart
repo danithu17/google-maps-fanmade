@@ -42,6 +42,8 @@ class _MapScreenState extends State<MapScreen> {
   final MapController _mapController = MapController();
   double _timeSliderValue = 0.5;
   bool _poiExpanded = false;
+  int _activeDockIndex = 0;
+  bool _isDrivingMode = false;
 
   static const LatLng _initialPosition = LatLng(37.7749, -122.4194); // SF
 
@@ -76,7 +78,7 @@ class _MapScreenState extends State<MapScreen> {
             ),
             children: [
               TileLayer(
-                urlTemplate: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+                urlTemplate: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
                 subdomains: const ['a', 'b', 'c', 'd'],
                 userAgentPackageName: 'com.example.spatial_nav_app',
               ),
@@ -132,56 +134,59 @@ class _MapScreenState extends State<MapScreen> {
           ),
 
           // 2. Search & Top Bar (Google Maps Style)
-          Positioned(
-            top: 50,
-            left: 16,
-            right: 16,
-            child: Column(
-              children: [
-                _buildSearchBar(),
-                const SizedBox(height: 12),
-                _buildCategories(),
-              ],
+          if (!_isDrivingMode)
+            Positioned(
+              top: 50,
+              left: 16,
+              right: 16,
+              child: Column(
+                children: [
+                  _buildSearchBar(),
+                  const SizedBox(height: 12),
+                  _buildCategories(),
+                ],
+              ),
             ),
-          ),
 
           // Map Controls (Right Side)
-          Positioned(
-            right: 16,
-            top: MediaQuery.of(context).size.height * 0.22,
-            child: _buildMapControls(),
-          ),
+          if (!_isDrivingMode)
+            Positioned(
+              right: 16,
+              top: MediaQuery.of(context).size.height * 0.22,
+              child: _buildMapControls(),
+            ),
 
           // 3. Time-Travel Slider (Vertical)
-          Positioned(
-            right: 20,
-            top: MediaQuery.of(context).size.height * 0.3,
-            bottom: MediaQuery.of(context).size.height * 0.25,
-            child: RotatedBox(
-              quarterTurns: 3,
-              child: _buildGlassContainer(
-                child: SliderTheme(
-                  data: SliderTheme.of(context).copyWith(
-                    activeTrackColor: const Color(0xFF00E5FF),
-                    inactiveTrackColor: Colors.white24,
-                    thumbColor: Colors.white,
-                    overlayColor: const Color(0xFF00E5FF).withOpacity(0.2),
-                    trackHeight: 4.0,
-                  ),
-                  child: Slider(
-                    value: _timeSliderValue,
-                    min: 0,
-                    max: 1,
-                    onChanged: (val) {
-                      setState(() {
-                        _timeSliderValue = val;
-                      });
-                    },
+          if (!_isDrivingMode)
+            Positioned(
+              right: 20,
+              top: MediaQuery.of(context).size.height * 0.3,
+              bottom: MediaQuery.of(context).size.height * 0.25,
+              child: RotatedBox(
+                quarterTurns: 3,
+                child: _buildGlassContainer(
+                  child: SliderTheme(
+                    data: SliderTheme.of(context).copyWith(
+                      activeTrackColor: const Color(0xFF00E5FF),
+                      inactiveTrackColor: Colors.white24,
+                      thumbColor: Colors.white,
+                      overlayColor: const Color(0xFF00E5FF).withOpacity(0.2),
+                      trackHeight: 4.0,
+                    ),
+                    child: Slider(
+                      value: _timeSliderValue,
+                      min: 0,
+                      max: 1,
+                      onChanged: (val) {
+                        setState(() {
+                          _timeSliderValue = val;
+                        });
+                      },
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
 
           // 4. Holographic POI Bubble (If expanded)
           if (_poiExpanded)
@@ -208,12 +213,12 @@ class _MapScreenState extends State<MapScreen> {
             ),
           ),
 
-          // 5. Smart Dock
+          // 5. Smart Dock or Driving Dashboard
           Positioned(
             bottom: 40,
             left: 20,
             right: 20,
-            child: _buildSmartDock(),
+            child: _isDrivingMode ? _buildDrivingDashboard() : _buildSmartDock(),
           ),
         ],
       ),
@@ -302,61 +307,131 @@ class _MapScreenState extends State<MapScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          _buildDockItem(LucideIcons.navigation, 'Nav', true),
-          _buildDockItem(LucideIcons.zap, 'Charge', false),
-          _buildDockItem(LucideIcons.coffee, 'Food', false),
-          _buildDockItem(LucideIcons.search, 'Search', false),
-          _buildDockItem(LucideIcons.settings, 'Settings', false),
+          _buildDockItem(LucideIcons.navigation, 'Nav', 0),
+          _buildDockItem(LucideIcons.zap, 'Charge', 1),
+          _buildDockItem(LucideIcons.coffee, 'Food', 2),
+          _buildDockItem(LucideIcons.search, 'Search', 3),
+          _buildDockItem(LucideIcons.settings, 'Settings', 4),
         ],
       ),
     );
   }
 
-  Widget _buildDockItem(IconData icon, String label, bool isActive) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(
-          icon,
-          color: isActive ? const Color(0xFF00E5FF) : Colors.white54,
-          size: 24,
-        ),
-        if (isActive)
-          Container(
-            margin: const EdgeInsets.only(top: 6),
-            width: 4,
-            height: 4,
-            decoration: const BoxDecoration(
-              color: Color(0xFF00E5FF),
-              shape: BoxShape.circle,
+  Widget _buildDockItem(IconData icon, String label, int index) {
+    bool isActive = _activeDockIndex == index;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _activeDockIndex = index;
+        });
+      },
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            color: isActive ? const Color(0xFF00E5FF) : Colors.white54,
+            size: 24,
+          ),
+          if (isActive)
+            Container(
+              margin: const EdgeInsets.only(top: 6),
+              width: 4,
+              height: 4,
+              decoration: const BoxDecoration(
+                color: Color(0xFF00E5FF),
+                shape: BoxShape.circle,
+              ),
+            )
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDrivingDashboard() {
+    return _buildGlassContainer(
+      padding: const EdgeInsets.all(20),
+      borderRadius: 24,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Nexus Tower', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+                  SizedBox(height: 4),
+                  Text('15 min (5.2 km)', style: TextStyle(fontSize: 16, color: Color(0xFF00E5FF), fontWeight: FontWeight.w600)),
+                ],
+              ),
+              IconButton(
+                icon: const Icon(LucideIcons.xCircle, color: Colors.white54, size: 28),
+                onPressed: () {
+                  setState(() {
+                    _isDrivingMode = false;
+                  });
+                },
+              )
+            ],
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton(
+            onPressed: () {
+              // Action for Start Driving
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF00E5FF),
+              foregroundColor: Colors.black,
+              minimumSize: const Size(double.infinity, 50),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            ),
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(LucideIcons.navigation),
+                SizedBox(width: 8),
+                Text('Start Driving', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              ],
             ),
           )
-      ],
+        ],
+      ),
     );
   }
 
   Widget _buildSearchBar() {
-    return _buildGlassContainer(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      borderRadius: 30,
-      child: Row(
-        children: [
-          Icon(LucideIcons.search, color: Colors.white70, size: 20),
-          const SizedBox(width: 12),
-          const Expanded(
-            child: Text(
-              'Search here',
-              style: TextStyle(color: Colors.white70, fontSize: 16),
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _isDrivingMode = true;
+          _poiExpanded = false;
+        });
+      },
+      child: _buildGlassContainer(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        borderRadius: 30,
+        child: Row(
+          children: [
+            const Icon(LucideIcons.search, color: Colors.white70, size: 20),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Search destination...',
+                style: TextStyle(color: Colors.white70, fontSize: 16),
+              ),
             ),
-          ),
-          Icon(LucideIcons.mic, color: Colors.white70, size: 20),
-          const SizedBox(width: 16),
-          CircleAvatar(
-            radius: 14,
-            backgroundColor: const Color(0xFF00E5FF).withOpacity(0.2),
-            child: Icon(LucideIcons.user, color: const Color(0xFF00E5FF), size: 16),
-          ),
-        ],
+            const Icon(LucideIcons.mic, color: Colors.white70, size: 20),
+            const SizedBox(width: 16),
+            CircleAvatar(
+              radius: 14,
+              backgroundColor: const Color(0xFF00E5FF).withOpacity(0.2),
+              child: const Icon(LucideIcons.user, color: Color(0xFF00E5FF), size: 16),
+            ),
+          ],
+        ),
       ),
     );
   }
